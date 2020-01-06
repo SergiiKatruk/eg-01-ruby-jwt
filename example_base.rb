@@ -35,38 +35,37 @@ class ExampleBase
 
   def update_token
     path = File.join(File.dirname(File.absolute_path(__FILE__)), 'docusign_private_key.txt')
-
-    token = @@api_client.configure_jwt_authorization_flow(path,
-                                                  DSConfig.aud,
-                                                  DSConfig.client_id,
-                                                  DSConfig.impersonated_user_guid, 3600)
+    @@api_client.set_oauth_base_path(DSConfig.aud);
+    token = @@api_client.request_jwt_user_token(DSConfig.client_id,
+                                                  DSConfig.impersonated_user_guid,
+                                                  path,
+                                                  3600)
 
     if @@account == nil
-      @@account = get_account_info()
+      @@account = get_account_info(token.access_token)
     end
 
-    @@api_client.config.host = @@account[:base_uri]
-    @@account_id = @@account[:account_id]
-    @@token = token
+    @@api_client.config.host = @@account.base_uri
+    @@account_id = @@account.account_id
+    @@token = token                     
     @@expireIn = Time.now.to_f + @@TOKEN_EXPIRATION_IN_SECONDS # would be better to receive the expires
        # info from DocuSign but it is not yet returned by the SDK.
     puts "Received token"
   end
 
-  def get_account_info
+  def get_account_info(access_token)
     # code here
-    response = @@api_client.call_api("GET", "https://#{DSConfig.aud}/oauth/userinfo", {return_type:"Object"})
-
-    if response.length > 1 and !(200..299).include?response[1]
+    response = @@api_client.get_user_info(access_token)
+    if response.accounts.length > 1 and !(200..299).include?response[1]
       raise 'Could not call get userInfo from DocuSign: %d' % response[1]
     end
 
-    accounts = response[0][:accounts]
+    accounts = response.accounts
     target = DSConfig.target_account_id
 
     if target != nil and target != "FALSE"
       accounts.each do |acct|
-        if acct[:account_id] == target
+        if acct.account_id == target
           return acct
         end
       end
@@ -74,7 +73,7 @@ class ExampleBase
     end
 
     accounts.each do |acct|
-      if acct[:is_default]
+      if acct.is_default
         return acct
       end
     end
