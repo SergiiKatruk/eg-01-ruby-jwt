@@ -35,7 +35,7 @@ class ExampleBase
 
   def update_token
     path = File.join(File.dirname(File.absolute_path(__FILE__)), 'docusign_private_key.txt')
-    @@api_client.set_oauth_base_path(DSConfig.aud);
+    @@api_client.set_oauth_base_path(DSConfig.aud)
     token = @@api_client.request_jwt_user_token(DSConfig.client_id,
                                                   DSConfig.impersonated_user_guid,
                                                   path,
@@ -65,17 +65,13 @@ class ExampleBase
 
     if target != nil and target != "FALSE"
       accounts.each do |acct|
-        if acct.account_id == target
-          return acct
-        end
+          return acct if acct.account_id == target
       end
       raise "The user does not have access to account #{target}"
     end
 
     accounts.each do |acct|
-      if acct.is_default
-        return acct
-      end
+        return acct if acct.is_default
     end
   end
 end
